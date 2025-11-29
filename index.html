@@ -83,19 +83,21 @@
     }
 
     #time-display {
-        font-size: 4.5rem;
+        font-size: 4rem;
         font-weight: 300;
         text-align: center;
         cursor: pointer;
         letter-spacing: 2px;
         min-width: 320px;
         user-select: none;
+        font-family: "JetBrains Mono", monospace;
     }
 
     #time-input {
-        font-size: 4.5rem;
+        font-size: 4rem;
         font-weight: 300;
-        width: 330px;
+        width: 100%;
+        max-width: 320px;
         text-align: center;
         border: none;
         outline: none;
@@ -103,6 +105,7 @@
         color: white;
         letter-spacing: 2px;
         font-family: "JetBrains Mono", monospace;
+        box-sizing: border-box;
     }
 
     /* Buttons */
@@ -138,6 +141,8 @@
 
 <body>
 
+<audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
+
 <div id="fullscreen-btn" onclick="toggleFullscreen()">⛶</div>
 
 <div class="top">
@@ -160,6 +165,11 @@
     let breakSeconds = 300;  // default 5 min
     let time = focusSeconds;
     let interval = null;
+
+    // Ask for notification permission on load
+    if (Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
 
     function formatTime(seconds) {
         const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
@@ -236,7 +246,22 @@
                 } else {
                     clearInterval(interval);
                     interval = null;
-                    alert("Time's up!");
+
+                    // Play soft sound
+                    const sound = document.getElementById("alarm-sound");
+                    sound.currentTime = 0;
+                    sound.play().catch(() => {});
+
+                    // Send desktop notification
+                    if (Notification.permission === "granted") {
+                        new Notification("Time's up!", {
+                            body: mode === "focus" ? "Your focus session is over." : "Break finished.",
+                            silent: false
+                        });
+                    }
+
+                    // Change button back to "START"
+                    document.getElementById("startBtn").innerText = "START";
                 }
             }, 1000);
             document.getElementById("startBtn").innerText = "PAUSE";
