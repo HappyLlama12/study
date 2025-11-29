@@ -112,7 +112,7 @@
 
     /* Buttons */
     .buttons {
-        margin-top: 30px;
+        margin-top: 14px;
         display: flex;
         gap: 20px;
         background: var(--glass-bg);
@@ -208,6 +208,63 @@
         background: rgba(255,100,100,1);
     }
 
+    /* Wake Lock Toggle Container */
+    #wake-toggle {
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        user-select: none;
+
+        /* Match your UI language */
+        font-family: "Inter", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 300;
+        color: rgba(255,255,255,0.85);
+        letter-spacing: 0.3px;
+    }
+
+    /* The bar */
+    #wake-switch {
+        width: 44px;
+        height: 22px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 22px;
+        position: relative;
+        transition: background 0.2s;
+        backdrop-filter: blur(4px);
+    }
+
+    #wake-label {
+        font-family: "Inter", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 300;
+        color: rgba(255,255,255,0.85);
+        letter-spacing: 0.3px;
+    }
+
+    /* The circle knob */
+    #wake-knob {
+        width: 18px;
+        height: 18px;
+        background: rgba(255,255,255,0.9);
+        border-radius: 50%;
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        transition: transform 0.25s ease;
+    }
+
+    /* When ON */
+    #wake-switch.on {
+        background: rgba(180,210,255,0.6);
+    }
+
+    #wake-switch.on #wake-knob {
+        transform: translateX(22px);
+    }
+
 
 </style>
 </head>
@@ -236,6 +293,13 @@
     <button onclick="resetTimer()">RESET</button>
 </div>
 
+<div id="wake-toggle" onclick="toggleWakeLock()">
+    <div id="wake-switch">
+        <div id="wake-knob"></div>
+    </div>
+    <span id="wake-label">Keep my screen on</span>
+</div>
+
 <div id="session-tracker">
     <div class="session-row">
         FOCUS: <span id="focusCount">0</span>
@@ -256,6 +320,8 @@
     let breakSeconds = 300;  // default 5 min
     let time = focusSeconds;
     let interval = null;
+    let wakeLock = null;
+    let wakeEnabled = false;
 
     // Ask for notification permission on load
     if (Notification.permission !== "granted") {
@@ -416,6 +482,40 @@
 
         // hide overlay
         document.getElementById("alarm-overlay").style.display = "none";
+    }
+
+    async function toggleWakeLock() {
+        wakeEnabled = !wakeEnabled;
+
+        const toggle = document.getElementById("wake-switch");
+
+        if (wakeEnabled) {
+            // turn switch ON
+            toggle.classList.add("on");
+
+            // request wake lock
+            try {
+                wakeLock = await navigator.wakeLock.request("screen");
+                wakeLock.addEventListener("release", () => {
+                    toggle.classList.remove("on");
+                    wakeEnabled = false;
+                });
+            } catch (err) {
+                console.log("Wake Lock error:", err);
+                toggle.classList.remove("on");
+                wakeEnabled = false;
+            }
+
+        } else {
+            // turn switch OFF
+            toggle.classList.remove("on");
+
+            // release wake lock
+            if (wakeLock) {
+                wakeLock.release();
+                wakeLock = null;
+            }
+        }
     }
 
     renderTime();
