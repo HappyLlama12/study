@@ -136,6 +136,31 @@
     button:hover {
         background: var(--accent);
     }
+
+    #session-tracker {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(255,255,255,0.2);
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.25);
+        font-size: 0.9rem;
+        backdrop-filter: blur(5px);
+    }
+
+    #session-tracker button {
+        margin-left: 6px;
+        font-size: 0.8rem;
+        padding: 2px 8px;
+        border: none;
+        background: rgba(255,255,255,0.3);
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    #session-tracker button:hover {
+        background: rgba(255,255,255,0.5);
+    }
 </style>
 </head>
 
@@ -157,6 +182,16 @@
 <div class="buttons">
     <button id="startBtn" onclick="startPause()">START</button>
     <button onclick="resetTimer()">RESET</button>
+</div>
+
+<div id="session-tracker">
+    FOCUS: <span id="focusCount">0</span>
+    <button onclick="adjustCount('focus', 1)">+</button>
+    <button onclick="adjustCount('focus', -1)">–</button>
+    <br>
+    BREAK: <span id="breakCount">0</span>
+    <button onclick="adjustCount('break', 1)">+</button>
+    <button onclick="adjustCount('break', -1)">–</button>
 </div>
 
 <script>
@@ -260,6 +295,15 @@
                         });
                     }
 
+                    if (mode === "focus") {
+                        focusCount++;
+                        localStorage.setItem("focusCount", focusCount);
+                    } else {
+                        breakCount++;
+                        localStorage.setItem("breakCount", breakCount);
+                    }
+                    updateTrackerUI();
+
                     // Change button back to "START"
                     document.getElementById("startBtn").innerText = "START";
                 }
@@ -287,6 +331,25 @@
         } else {
             document.exitFullscreen();
         }
+    }
+
+    let focusCount = Number(localStorage.getItem("focusCount") || 0);
+    let breakCount = Number(localStorage.getItem("breakCount") || 0);
+
+    function updateTrackerUI() {
+        document.getElementById("focusCount").innerText = focusCount;
+        document.getElementById("breakCount").innerText = breakCount;
+    }
+
+    function adjustCount(type, delta) {
+        if (type === "focus") {
+            focusCount = Math.max(0, focusCount + delta);
+            localStorage.setItem("focusCount", focusCount);
+        } else {
+            breakCount = Math.max(0, breakCount + delta);
+            localStorage.setItem("breakCount", breakCount);
+        }
+        updateTrackerUI();
     }
 
     renderTime();
