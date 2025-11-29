@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Minimal Timer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Clock-like monospaced font -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.12);
+        --glass-border: rgba(255, 255, 255, 0.25);
+        --text-main: #ffffff;
+        --text-soft: #d9d9d9;
+        --accent: rgba(180, 210, 255, 0.55);
+    }
+
+    body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: "Inter", sans-serif;
+        background: url("background.jpg") no-repeat center center/cover;
+        color: var(--text-main);
+    }
+
+    #fullscreen-btn {
+        position: fixed;
+        top: 15px;
+        right: 20px;
+        font-size: 1.6rem;
+        cursor: pointer;
+        color: white;
+        opacity: 0.7;
+        transition: 0.2s;
+        user-select: none;
+    }
+    #fullscreen-btn:hover {
+        opacity: 1;
+    }
+
+    /* Top toggle buttons */
+    .top {
+        display: flex;
+        gap: 20px;
+        font-size: 1rem;
+        margin-bottom: 30px;
+        user-select: none;
+        background: var(--glass-bg);
+        padding: 8px 18px;
+        border-radius: 12px;
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(6px);
+    }
+
+    .toggle {
+        cursor: pointer;
+        padding: 6px 14px;
+        border-radius: 8px;
+        color: var(--text-soft);
+        transition: 0.2s;
+    }
+
+    .toggle.active {
+        background: var(--glass-border);
+        color: white;
+    }
+
+    /* Time display container */
+    #time-container {
+        padding: 25px 35px;
+        border-radius: 14px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 0 25px rgba(0, 0, 0, 0.2);
+    }
+
+    #time-display {
+        font-size: 4.5rem;
+        font-weight: 300;
+        text-align: center;
+        cursor: pointer;
+        letter-spacing: 2px;
+        min-width: 320px;
+        user-select: none;
+    }
+
+    #time-input {
+        font-size: 4.5rem;
+        font-weight: 300;
+        width: 330px;
+        text-align: center;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: white;
+        letter-spacing: 2px;
+        font-family: "JetBrains Mono", monospace;
+    }
+
+    /* Buttons */
+    .buttons {
+        margin-top: 30px;
+        display: flex;
+        gap: 20px;
+        background: var(--glass-bg);
+        padding: 10px 20px;
+        border-radius: 12px;
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(6px);
+    }
+
+    button {
+        font-size: 1rem;
+        padding: 12px 28px;
+        border: none;
+        border-radius: 8px;
+        background: var(--glass-border);
+        color: white;
+        cursor: pointer;
+        transition: 0.2s;
+        font-family: "JetBrains Mono", monospace;
+        letter-spacing: 1px;
+    }
+
+    button:hover {
+        background: var(--accent);
+    }
+</style>
+</head>
+
+<body>
+
+<div id="fullscreen-btn" onclick="toggleFullscreen()">⛶</div>
+
+<div class="top">
+    <div id="focusBtn" class="toggle active" onclick="setMode('focus')">FOCUS</div>
+    <div id="breakBtn" class="toggle" onclick="setMode('break')">BREAK</div>
+</div>
+
+<div id="time-container">
+    <div id="time-display" onclick="switchToInput()">01:00:00</div>
+</div>
+
+<div class="buttons">
+    <button id="startBtn" onclick="startPause()">START</button>
+    <button onclick="resetTimer()">RESET</button>
+</div>
+
+<script>
+    let mode = "focus";
+    let focusSeconds = 3600; // default 1 hour
+    let breakSeconds = 300;  // default 5 min
+    let time = focusSeconds;
+    let interval = null;
+
+    function formatTime(seconds) {
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    }
+
+    function renderTime() {
+        document.getElementById("time-display").innerText = formatTime(time);
+    }
+
+    function setMode(newMode) {
+        mode = newMode;
+
+        document.getElementById("focusBtn").classList.toggle("active", mode === "focus");
+        document.getElementById("breakBtn").classList.toggle("active", mode === "break");
+
+        time = mode === "focus" ? focusSeconds : breakSeconds;
+        renderTime();
+    }
+
+    /* Inline editable time */
+    function switchToInput() {
+        const display = document.getElementById("time-display");
+        const current = display.innerText;
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.id = "time-input";
+        input.value = current;
+
+        input.onblur = () => finalizeInput(input);
+        input.onkeydown = (e) => {
+            if (e.key === "Enter") input.blur();
+        };
+
+        display.replaceWith(input);
+        input.focus();
+        input.select();
+    }
+
+    function finalizeInput(input) {
+        const parts = input.value.split(":");
+        if (parts.length !== 3) return revertToDisplay(input, time);
+
+        let [h, m, s] = parts.map(Number);
+        if ([h, m, s].some(isNaN)) return revertToDisplay(input, time);
+
+        const newSec = h * 3600 + m * 60 + s;
+
+        if (mode === "focus") focusSeconds = newSec;
+        else breakSeconds = newSec;
+
+        time = newSec;
+        revertToDisplay(input, newSec);
+    }
+
+    function revertToDisplay(input, seconds) {
+        const display = document.createElement("div");
+        display.id = "time-display";
+        display.onclick = switchToInput;
+        display.innerText = formatTime(seconds);
+        input.replaceWith(display);
+    }
+
+    /* Timer */
+    function startPause() {
+        if (interval === null) {
+            interval = setInterval(() => {
+                if (time > 0) {
+                    time--;
+                    renderTime();
+                } else {
+                    clearInterval(interval);
+                    interval = null;
+                    alert("Time's up!");
+                }
+            }, 1000);
+            document.getElementById("startBtn").innerText = "PAUSE";
+        } else {
+            clearInterval(interval);
+            interval = null;
+            document.getElementById("startBtn").innerText = "START";
+        }
+    }
+
+    function resetTimer() {
+        clearInterval(interval);
+        interval = null;
+        document.getElementById("startBtn").innerText = "START";
+
+        time = mode === "focus" ? focusSeconds : breakSeconds;
+        renderTime();
+    }
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    renderTime();
+</script>
+
+</body>
+</html>
