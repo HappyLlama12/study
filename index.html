@@ -140,31 +140,81 @@
     #session-tracker {
         position: fixed;
         bottom: 20px;
-        right: 20px;
-        background: rgba(255,255,255,0.2);
-        padding: 10px 14px;
-        border-radius: 10px;
+        left: 20px;    /* move to bottom-left */
+        
+        display: flex;
+        flex-direction: column;      /* vertical stacking */
+        gap: 14px;                    /* more space between focus/break lines */
+
+        background: rgba(255,255,255,0.18);
+        padding: 14px 18px;
+        border-radius: 12px;
         border: 1px solid rgba(255,255,255,0.25);
-        font-size: 0.9rem;
-        backdrop-filter: blur(5px);
+        backdrop-filter: blur(6px);
+
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .session-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;    /* spacing between text and buttons */
     }
 
     #session-tracker button {
-        margin-left: 6px;
         font-size: 0.8rem;
-        padding: 2px 8px;
+        padding: 2px 9px;
         border: none;
-        background: rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.35);
         border-radius: 6px;
         cursor: pointer;
     }
     #session-tracker button:hover {
-        background: rgba(255,255,255,0.5);
+        background: rgba(255,255,255,0.55);
     }
+
+    /* Full-screen blur overlay */
+    #alarm-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.4);
+        backdrop-filter: blur(10px);
+        display: none;                 /* hidden by default */
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    /* Centered STOP ALARM button */
+    #stopAlarmCenterBtn {
+        font-size: 1.3rem;
+        padding: 14px 28px;
+        border: none;
+        border-radius: 10px;
+        background: rgba(255,100,100,0.8);
+        color: white;
+        cursor: pointer;
+        letter-spacing: 1px;
+        font-family: "Inter", sans-serif;
+    }
+
+    #stopAlarmCenterBtn:hover {
+        background: rgba(255,100,100,1);
+    }
+
+
 </style>
 </head>
 
 <body>
+
+<div id="alarm-overlay">
+    <button id="stopAlarmCenterBtn" onclick="stopAlarmSound()">Stop Alarm</button>
+</div>
 
 <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
 
@@ -176,7 +226,7 @@
 </div>
 
 <div id="time-container">
-    <div id="time-display" onclick="switchToInput()">01:00:00</div>
+    <div id="time-display" onclick="switchToInput()">00:50:00</div>
 </div>
 
 <div class="buttons">
@@ -185,18 +235,22 @@
 </div>
 
 <div id="session-tracker">
-    FOCUS: <span id="focusCount">0</span>
-    <button onclick="adjustCount('focus', 1)">+</button>
-    <button onclick="adjustCount('focus', -1)">–</button>
-    <br>
-    BREAK: <span id="breakCount">0</span>
-    <button onclick="adjustCount('break', 1)">+</button>
-    <button onclick="adjustCount('break', -1)">–</button>
+    <div class="session-row">
+        FOCUS: <span id="focusCount">0</span>
+        <button onclick="adjustCount('focus', 1)">+</button>
+        <button onclick="adjustCount('focus', -1)">–</button>
+    </div>
+
+    <div class="session-row">
+        BREAK: <span id="breakCount">0</span>
+        <button onclick="adjustCount('break', 1)">+</button>
+        <button onclick="adjustCount('break', -1)">–</button>
+    </div>
 </div>
 
 <script>
     let mode = "focus";
-    let focusSeconds = 3600; // default 1 hour
+    let focusSeconds = 50*60; // default 1 hour
     let breakSeconds = 300;  // default 5 min
     let time = focusSeconds;
     let interval = null;
@@ -286,6 +340,7 @@
                     const sound = document.getElementById("alarm-sound");
                     sound.currentTime = 0;
                     sound.play().catch(() => {});
+                    document.getElementById("alarm-overlay").style.display = "flex";
 
                     // Send desktop notification
                     if (Notification.permission === "granted") {
@@ -350,6 +405,15 @@
             localStorage.setItem("breakCount", breakCount);
         }
         updateTrackerUI();
+    }
+
+    function stopAlarmSound() {
+        const sound = document.getElementById("alarm-sound");
+        sound.pause();
+        sound.currentTime = 0;
+
+        // hide overlay
+        document.getElementById("alarm-overlay").style.display = "none";
     }
 
     renderTime();
