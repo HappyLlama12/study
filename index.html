@@ -208,6 +208,29 @@
         background: rgba(255,100,100,1);
     }
 
+    #alarm-modal {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    #addTwoBtn {
+        font-size: 1.1rem;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background: rgba(180, 210, 255, 0.7);
+        color: white;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        font-family: "Inter", sans-serif;
+    }
+
+    #addTwoBtn:hover {
+        background: rgba(180, 210, 255, 0.9);
+    }
+
     /* Wake Lock Toggle Container */
     #wake-toggle {
         margin-top: 6px;
@@ -248,7 +271,7 @@
     #wake-knob {
         width: 18px;
         height: 18px;
-        background: rgba(255,255,255,0.9);
+        background: rgba(255,255,255,0.95);
         border-radius: 50%;
         position: absolute;
         top: 2px;
@@ -258,7 +281,7 @@
 
     /* When ON */
     #wake-switch.on {
-        background: rgba(180,210,255,0.6);
+        background: var(--glass-border);
     }
 
     #wake-switch.on #wake-knob {
@@ -272,7 +295,10 @@
 <body>
 
 <div id="alarm-overlay">
-    <button id="stopAlarmCenterBtn" onclick="stopAlarmSound()">Stop Alarm</button>
+    <div id="alarm-modal">
+        <button id="stopAlarmCenterBtn" onclick="stopAlarmSound()">STOP ALARM</button>
+        <button id="addTwoBtn" onclick="addTwoMinutes()">+ 2 minutes</button>
+    </div>
 </div>
 
 <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
@@ -322,6 +348,23 @@
     let interval = null;
     let wakeLock = null;
     let wakeEnabled = false;
+
+    // Restore wake lock preference on load
+    const savedWake = localStorage.getItem("wakeEnabled");
+    if (savedWake === "true") {
+        // turn switch ON visually
+        document.addEventListener("DOMContentLoaded", async () => {
+            const toggle = document.getElementById("wake-switch");
+            toggle.classList.add("on");
+            wakeEnabled = true;
+
+            try {
+                wakeLock = await navigator.wakeLock.request("screen");
+            } catch (err) {
+                console.log("WakeLock restore failed:", err);
+            }
+        });
+    }
 
     // Ask for notification permission on load
     if (Notification.permission !== "granted") {
@@ -492,6 +535,7 @@
         if (wakeEnabled) {
             // turn switch ON
             toggle.classList.add("on");
+            localStorage.setItem("wakeEnabled", "true");
 
             // request wake lock
             try {
@@ -509,6 +553,7 @@
         } else {
             // turn switch OFF
             toggle.classList.remove("on");
+            localStorage.setItem("wakeEnabled", "false");
 
             // release wake lock
             if (wakeLock) {
@@ -516,6 +561,24 @@
                 wakeLock = null;
             }
         }
+    }
+
+    // If the page becomes visible again and wake lock was enabled, re-request it
+    document.addEventListener("visibilitychange", async () => {
+        if (wakeEnabled && document.visibilityState === "visible") {
+            try {
+                wakeLock = await navigator.wakeLock.request("screen");
+            } catch (err) {
+                console.log("WakeLock restore failed:", err);
+            }
+        }
+    });
+
+    function addTwoMinutes() {
+        stopAlarmSound(); // hides overlay + stops sound
+        time = 2 * 60;     // set timer to 2 minutes
+        renderTime();
+        startPause();      // auto-start the timer again
     }
 
     renderTime();
